@@ -88,7 +88,6 @@ class Register(commands.Cog):
             similar = False
             similarity_value = 0
 
-            # 🔥 CORREÇÃO CRÍTICA: await no banco
             hashes = await fetch_all_hashes()
 
             for db_hash in hashes:
@@ -107,63 +106,73 @@ class Register(commands.Cog):
             if similar:
                 await message.channel.send(
                     f"⚠️ **Skin parecida detectada** ({similarity_value:.1f}%). "
-                    "Você pode continuar o cadastro."
+                    "Você pode continuar."
                 )
 
             await message.channel.send(
-                "🆔 **Etapa 2**\nEnvie o **ID do jogador**:",
+                "🆔 **Etapa 2**\nInforme o **ID do jogador**:",
                 view=CancelView(uid)
             )
+            return
 
-        # ====== ETAPA 2 — ID DO JOGADOR ======
-        elif session["step"] == 2:
+        # ====== ETAPA 2 ======
+        if session["step"] == 2:
             session["user_id"] = message.content.strip()
             session["step"] = 3
 
             await message.channel.send(
-                "🎭 **Etapa 3**\nInforme o **nome do personagem**:",
+                "🎭 **Etapa 3**\nNome do personagem:",
                 view=CancelView(uid)
             )
+            return
 
-        # ====== ETAPA 3 — NOME ======
-        elif session["step"] == 3:
+        # ====== ETAPA 3 ======
+        if session["step"] == 3:
             session["character_name"] = message.content.strip()
             session["step"] = 4
 
             await message.channel.send(
-                "🧬 **Etapa 4**\nInforme a **raça do personagem**:",
+                "🧬 **Etapa 4**\nRaça do personagem:",
                 view=CancelView(uid)
             )
+            return
 
         # ====== ETAPA 4 — FINALIZA ======
-        elif session["step"] == 4:
+        if session["step"] == 4:
             session["raca"] = message.content.strip()
 
-            # Upload para R2 (sync, ok)
-            key = upload_image(
-                session["image_bytes"],
-                "skin.png"
-            )
-
-            # 🔥 CORREÇÃO CRÍTICA: await no insert
-            await insert_skin(
-                user_id=session["user_id"],
-                character_name=session["character_name"],
-                raca=session["raca"],
-                image_url=get_public_url(key),
-                image_hash=session["image_hash"],
-                created_by=uid
-            )
-
-            sessions.pop(uid, None)
-
-            await message.channel.send(
-                embed=discord.Embed(
-                    title="✅ Cadastro concluído",
-                    description="Skin registrada com sucesso!",
-                    color=0x57F287
+            try:
+                key = upload_image(
+                    session["image_bytes"],
+                    "skin.png"
                 )
-            )
+
+                insert_skin(
+                    user_id=session["user_id"],
+                    character_name=session["character_name"],
+                    raca=session["raca"],
+                    image_url=get_public_url(key),
+                    image_hash=session["image_hash"],
+                    created_by=uid
+                )
+
+                sessions.pop(uid, None)
+
+                await message.channel.send(
+                    embed=discord.Embed(
+                        title="🌿 Cadastro concluído",
+                        description="A semente foi plantada. A floresta se renova.",
+                        color=0x57F287
+                    )
+                )
+
+            except Exception as e:
+                await message.channel.send(
+                    "❌ Erro ao salvar o cadastro. Avise um administrador."
+                )
+                print("ERRO NO REGISTER:", e)
+
+            return
 
 
 async def setup(bot):
