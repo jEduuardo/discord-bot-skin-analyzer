@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import psycopg2
+import asyncpg
 import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
