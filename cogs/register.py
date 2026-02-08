@@ -27,7 +27,7 @@ class CancelView(discord.ui.View):
 
         sessions.pop(self.author_id, None)
         await interaction.response.send_message(
-            "Cadastro cancelado.",
+            "❌ Cadastro cancelado.",
             ephemeral=True
         )
         self.stop()
@@ -40,24 +40,24 @@ class Register(commands.Cog):
     # ---------- SLASH COMMAND ----------
     @app_commands.command(name="register", description="Cadastrar uma skin")
     async def register(self, interaction: discord.Interaction):
-        user_id = interaction.user.id
+        uid = interaction.user.id
 
-        if user_id in sessions:
+        if uid in sessions:
             await interaction.response.send_message(
                 "⚠️ Você já tem um cadastro em andamento.",
                 ephemeral=True
             )
             return
 
-        sessions[user_id] = {"step": 1}
+        sessions[uid] = {"step": 1}
 
         await interaction.response.send_message(
             embed=discord.Embed(
                 title="📤 Cadastro de Skin",
-                description="**Etapa 1**\nEnvie a skin em PNG.",
+                description="**Etapa 1**\nEnvie a skin em **PNG**.",
                 color=0x5865F2
             ),
-            view=CancelView(user_id)
+            view=CancelView(uid)
         )
 
     # ---------- LISTENER ----------
@@ -79,7 +79,7 @@ class Register(commands.Cog):
 
             attachment = message.attachments[0]
             if not attachment.filename.lower().endswith(".png"):
-                await message.channel.send("⚠️ Apenas PNG.")
+                await message.channel.send("⚠️ Apenas imagens **PNG** são aceitas.")
                 return
 
             image_bytes = await attachment.read()
@@ -88,7 +88,10 @@ class Register(commands.Cog):
             similar = False
             similarity_value = 0
 
-            for db_hash in fetch_all_hashes():
+            # 🔥 CORREÇÃO CRÍTICA: await no banco
+            hashes = await fetch_all_hashes()
+
+            for db_hash in hashes:
                 similarity = calculate_similarity(image_hash, db_hash)
                 if similarity >= 85:
                     similar = True
@@ -103,29 +106,32 @@ class Register(commands.Cog):
 
             if similar:
                 await message.channel.send(
-                    f"⚠️ Skin parecida detectada (**{similarity_value:.1f}%**). Você pode continuar."
+                    f"⚠️ **Skin parecida detectada** ({similarity_value:.1f}%). "
+                    "Você pode continuar o cadastro."
                 )
 
             await message.channel.send(
-                "🆔 **Etapa 2**\nEnvie o ID do jogador:",
+                "🆔 **Etapa 2**\nEnvie o **ID do jogador**:",
                 view=CancelView(uid)
             )
 
-        # ====== ETAPA 2 ======
+        # ====== ETAPA 2 — ID DO JOGADOR ======
         elif session["step"] == 2:
             session["user_id"] = message.content.strip()
             session["step"] = 3
+
             await message.channel.send(
-                "🎭 **Etapa 3**\nNome do personagem:",
+                "🎭 **Etapa 3**\nInforme o **nome do personagem**:",
                 view=CancelView(uid)
             )
 
-        # ====== ETAPA 3 ======
+        # ====== ETAPA 3 — NOME ======
         elif session["step"] == 3:
             session["character_name"] = message.content.strip()
             session["step"] = 4
+
             await message.channel.send(
-                "🧬 **Etapa 4**\nRaça do personagem:",
+                "🧬 **Etapa 4**\nInforme a **raça do personagem**:",
                 view=CancelView(uid)
             )
 
@@ -133,12 +139,14 @@ class Register(commands.Cog):
         elif session["step"] == 4:
             session["raca"] = message.content.strip()
 
+            # Upload para R2 (sync, ok)
             key = upload_image(
                 session["image_bytes"],
                 "skin.png"
             )
 
-            insert_skin(
+            # 🔥 CORREÇÃO CRÍTICA: await no insert
+            await insert_skin(
                 user_id=session["user_id"],
                 character_name=session["character_name"],
                 raca=session["raca"],
@@ -147,7 +155,7 @@ class Register(commands.Cog):
                 created_by=uid
             )
 
-            sessions.pop(uid)
+            sessions.pop(uid, None)
 
             await message.channel.send(
                 embed=discord.Embed(

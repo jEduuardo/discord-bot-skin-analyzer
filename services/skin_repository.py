@@ -1,41 +1,53 @@
-# -*- coding: utf-8 -*-
-
-import asyncpg
+# services/skin_repository.py
 import os
+import asyncpg
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-def get_connection():
-    return psycopg2.connect(DATABASE_URL)
+_pool = None
 
 
-def fetch_all_hashes():
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT image_hash FROM skins")
-            return [row[0] for row in cur.fetchall()]
+async def get_pool():
+    global _pool
+    if _pool is None:
+        _pool = await asyncpg.create_pool(DATABASE_URL)
+    return _pool
 
 
-def insert_skin(
-    user_id: str,
+async def fetch_all_hashes():
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT image_hash FROM skins")
+        return [row["image_hash"] for row in rows]
+
+
+async def insert_skin(
+    user_id: int,
     character_name: str,
     raca: str,
     image_url: str,
     image_hash: str,
     created_by: int
 ):
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO skins
-                (user_id, character_name, raca, imagem_url, image_hash, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO skins (
                 user_id,
                 character_name,
                 raca,
-                image_url,
+                imagem_url,
                 image_hash,
+                created_at,
                 created_by
-            ))
-            conn.commit()
+            )
+            VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+            """,
+            user_id,
+            character_name,
+            raca,
+            image_url,
+            image_hash,
+            created_by
+        )
