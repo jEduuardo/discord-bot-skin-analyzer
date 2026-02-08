@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 
 import discord
@@ -161,13 +160,3 @@ class Register(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Register(bot))
-=======
-from discord.ext import commands
-
-class Config(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
-async def setup(bot):
-    await bot.add_cog(Config(bot))
->>>>>>> fba511dfb6b5229b5842777eae7386494812dd68
