@@ -9,11 +9,8 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
-<<<<<<< HEAD
 intents.message_content = True
 
-=======
->>>>>>> fba511dfb6b5229b5842777eae7386494812dd68
 
 bot = commands.Bot(
     command_prefix="!",
