@@ -3,7 +3,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-
 from services.skin_analyzer import generate_hash, calculate_similarity
 from services.skin_repository import fetch_all_hashes, insert_skin
 from storage.r2_storage import upload_image, get_public_url
@@ -11,7 +10,6 @@ from storage.r2_storage import upload_image, get_public_url
 sessions = {}
 
 # ---------- VIEW CANCELAR ----------
-
 class CancelView(discord.ui.View):
     def __init__(self, uid: int):
         super().__init__(timeout=300)
@@ -34,7 +32,6 @@ class CancelView(discord.ui.View):
         )
 
 # ---------- VIEW CONFIRMAR ----------
-
 class ConfirmView(discord.ui.View):
     def __init__(self, uid: int):
         super().__init__(timeout=300)
@@ -68,7 +65,6 @@ class ConfirmView(discord.ui.View):
         )
 
 # ---------- COG ----------
-
 class Register(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -153,7 +149,8 @@ class Register(commands.Cog):
                 )
                 await view.wait()
                 if not view.value:
-                    return  # cancelou ou não continuou
+                    sessions.pop(uid, None)
+                    return await message.channel.send("❌ Cadastro cancelado.")
             else:
                 await log_msg.edit(
                     content=(
@@ -163,7 +160,6 @@ class Register(commands.Cog):
                 )
 
             session["step"] = 2
-
             view = CancelView(uid)
             msg = await message.channel.send(
                 embed=discord.Embed(
@@ -226,7 +222,7 @@ class Register(commands.Cog):
             key = upload_image(session["image_bytes"], "skin.png")
             image_url = get_public_url(key)
 
-            # Inserir no banco
+            # Inserir no banco (asyncpg seguro contra cache)
             await insert_skin(
                 user_id=session["user_id"],
                 character_name=session["character_name"],
