@@ -28,7 +28,7 @@ class CancelView(discord.ui.View):
         sessions.pop(self.uid, None)
         await interaction.response.send_message(
             "❌ Cadastro cancelado.",
-            ephemeral=True
+            ephemeral=False
         )
 
 # ---------- VIEW CONFIRMAR ----------
@@ -77,18 +77,21 @@ class Register(commands.Cog):
         if uid in sessions:
             return await interaction.response.send_message(
                 "⚠️ Você já tem um cadastro em andamento.",
-                ephemeral=True
+                ephemeral=False
             )
 
         sessions[uid] = {"step": 1}
+
+        view = CancelView(uid)
+
         await interaction.response.send_message(
             embed=discord.Embed(
                 title="📤 Cadastro de Skin",
                 description="**Etapa 1**\nEnvie a skin em **PNG**.",
                 color=0x5865F2
-            )
+            ),
+            view=view
         )
-
     # ---------- LISTENER ----------
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -237,7 +240,7 @@ class Register(commands.Cog):
             await message.channel.send(
                 embed=discord.Embed(
                     title="🌱 Cadastro concluído",
-                    description="A semente foi plantada. A floresta se renova.",
+                    description="Uma nova semente foi plantada.",
                     color=0x57F287
                 )
             )
